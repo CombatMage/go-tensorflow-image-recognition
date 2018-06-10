@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -23,7 +23,7 @@ func responseJSON(w http.ResponseWriter, data interface{}) {
 func logRequest(fn httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 		timestamp := time.Now()
-		fmt.Printf("%s - %s\n", timestamp.Format("Mon Jan 2 15:04:05 2006"), r.URL.Path)
+		log.Printf("%s - %s\n", timestamp.Format("Mon Jan 2 15:04:05 2006"), r.URL.Path)
 		fn(w, r, params)
 	}
 }
