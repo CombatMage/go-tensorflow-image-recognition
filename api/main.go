@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"log"
@@ -32,13 +33,16 @@ var (
 )
 
 func main() {
+	log.Println("Loading model for image recognition")
 	if err := loadModel(); err != nil {
 		log.Fatal(err)
 		return
 	}
 
 	r := httprouter.New()
-	r.POST("/recognize", recognizeHandler)
+	r.POST("/recognize", logRequest(recognizeHandler))
+
+	log.Println("Starting webserver on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
@@ -69,7 +73,7 @@ func loadModel() error {
 	for scanner.Scan() {
 		labels = append(labels, scanner.Text())
 	}
-	if err := scanner.Err(); err != nil {
+	if scanner.Err() != nil {
 		return err
 	}
 	return nil
@@ -136,5 +140,10 @@ func findBestLabels(probabilities []float32) []LabelResult {
 	// Sort by probability
 	sort.Sort(ByProbability(resultLabels))
 	// Return top 5 labels
+	log.Println("top 5 labels:")
+	json, err := json.MarshalIndent(resultLabels[:5], "", "\t")
+	if err == nil {
+		log.Println(string(json))
+	}
 	return resultLabels[:5]
 }

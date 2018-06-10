@@ -1,0 +1,12 @@
+<html>
+<head>
+       <title>Upload file</title>
+</head>
+<body>
+<form enctype="multipart/form-data" action="http://api:8080/recognize" method="post">
+    <input type="file" name="image" />
+    <input type="hidden" name="token" value="{{.}}"/>
+    <input type="submit" value="upload" />
+</form>
+</body>
+</html>
