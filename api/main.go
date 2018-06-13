@@ -1,85 +1,44 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/json"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
-	"sort"
 	"strings"
 
+	tfutil "github.com/CombatMage/go-tensorflow-utilities"
 	"github.com/julienschmidt/httprouter"
-	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
 
-type ClassifyResult struct {
-	Filename string        `json:"filename"`
-	Labels   []LabelResult `json:"labels"`
+type imageClassifierAPI struct {
+	model *tfutil.Model
 }
-
-type LabelResult struct {
-	Label       string  `json:"label"`
-	Probability float32 `json:"probability"`
-}
-
-var (
-	graphModel   *tf.Graph
-	sessionModel *tf.Session
-	labels       []string
-)
 
 func main() {
 	log.Println("Loading model for image recognition")
-	if err := loadModel(); err != nil {
+	model, err := tfutil.NewModel(
+		"/model/tensorflow_inception_graph.pb", "/model/imagenet_comp_graph_label_strings.txt")
+	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
+	api := imageClassifierAPI{model: model}
+
 	r := httprouter.New()
-	r.POST("/recognize", logRequest(recognizeHandler))
+	r.POST("/recognize", logRequest(api.classifyUploadedImage))
 
 	log.Println("Starting webserver on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
-func loadModel() error {
-	// Load inception model
-	model, err := ioutil.ReadFile("/model/tensorflow_inception_graph.pb")
-	if err != nil {
-		return err
-	}
-	graphModel = tf.NewGraph()
-	if err := graphModel.Import(model, ""); err != nil {
-		return err
-	}
-
-	sessionModel, err = tf.NewSession(graphModel, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Load labels
-	labelsFile, err := os.Open("/model/imagenet_comp_graph_label_strings.txt")
-	if err != nil {
-		return err
-	}
-	defer labelsFile.Close()
-	scanner := bufio.NewScanner(labelsFile)
-	// Labels are separated by newlines
-	for scanner.Scan() {
-		labels = append(labels, scanner.Text())
-	}
-	if scanner.Err() != nil {
-		return err
-	}
-	return nil
+type classifyResult struct {
+	Filename string         `json:"filename"`
+	Labels   []tfutil.Label `json:"labels"`
 }
 
-func recognizeHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (classifier imageClassifierAPI) classifyUploadedImage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Read image
 	imageFile, header, err := r.FormFile("image")
 	// Will contain filename and extension
@@ -93,57 +52,25 @@ func recognizeHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	// Copy image data to a buffer
 	io.Copy(&imageBuffer, imageFile)
 
-	// ...
-	// Make tensor
-	tensor, err := makeTensorFromImage(&imageBuffer, imageName[:1][0])
+	imageType, err := getImageTypeFromName(imageName[1])
 	if err != nil {
-		responseError(w, "Invalid image", http.StatusBadRequest)
+		responseError(w, "Unsupported image type", http.StatusUnsupportedMediaType)
 		return
 	}
 
-	// Run inference
-	output, err := sessionModel.Run(
-		map[tf.Output]*tf.Tensor{
-			graphModel.Operation("input").Output(0): tensor,
-		},
-		[]tf.Output{
-			graphModel.Operation("output").Output(0),
-		},
-		nil)
+	log.Println("Try to classify image of type " + imageType)
+	result, err := classifier.model.ClassifyImage(&imageBuffer, imageType)
 	if err != nil {
 		responseError(w, "Could not run inference", http.StatusInternalServerError)
 		return
 	}
 
-	// Return best labels
-	responseJSON(w, ClassifyResult{
+	for _, v := range result {
+		log.Println(v.Label)
+	}
+
+	responseJSON(w, classifyResult{
 		Filename: header.Filename,
-		Labels:   findBestLabels(output[0].Value().([][]float32)[0]),
+		Labels:   result,
 	})
-}
-
-type ByProbability []LabelResult
-
-func (a ByProbability) Len() int           { return len(a) }
-func (a ByProbability) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByProbability) Less(i, j int) bool { return a[i].Probability > a[j].Probability }
-
-func findBestLabels(probabilities []float32) []LabelResult {
-	// Make a list of label/probability pairs
-	var resultLabels []LabelResult
-	for i, p := range probabilities {
-		if i >= len(labels) {
-			break
-		}
-		resultLabels = append(resultLabels, LabelResult{Label: labels[i], Probability: p})
-	}
-	// Sort by probability
-	sort.Sort(ByProbability(resultLabels))
-	// Return top 5 labels
-	log.Println("top 5 labels:")
-	json, err := json.MarshalIndent(resultLabels[:5], "", "\t")
-	if err == nil {
-		log.Println(string(json))
-	}
-	return resultLabels[:5]
 }

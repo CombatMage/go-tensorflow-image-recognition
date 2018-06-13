@@ -57,9 +57,9 @@ ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 
 # Install dependencies
-RUN go get github.com/tensorflow/tensorflow/tensorflow/go \
-	github.com/tensorflow/tensorflow/tensorflow/go/op \
-	github.com/julienschmidt/httprouter
+#RUN go get github.com/tensorflow/tensorflow/tensorflow/go \
+#	github.com/tensorflow/tensorflow/tensorflow/go/op \
+#	github.com/julienschmidt/httprouter
 
 # Download InceptionV3 model
 RUN mkdir -p /model && \

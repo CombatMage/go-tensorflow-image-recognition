@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/CombatMage/go-tensorflow-utilities"
+  packages = ["."]
+  revision = "4e22a36ba30b6491c7a54958b20010cf0f1e0e50"
+
+[[projects]]
   name = "github.com/julienschmidt/httprouter"
   packages = ["."]
   revision = "8c199fb6259ffc1af525cc3ad52ee60ba8359669"
@@ -19,6 +25,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0ce5c2268dc55e8f746244f62501f308ee63c3508a4fe4ef79244f7c8ab7dd9b"
+  inputs-digest = "94d13a55bf300005cf939562ad1cf00e13cce33e45273de972f7a4b7caaef6f7"
   solver-name = "gps-cdcl"
   solver-version = 1
