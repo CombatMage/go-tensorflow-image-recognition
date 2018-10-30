@@ -1,12 +1,8 @@
 # Image Recognition API in Go using TensorFlow
 
-Credit goes to [Build an Image Recognition API with Go and TensorFlow](https://outcrawl.com/image-recognition-api-go-tensorflow/).
-
 <p align="center">
   <img src="./cover.jpg"/>
 </p>
-
-This is an adaption of the code above.
 
 ## Running the service
 
@@ -31,3 +27,7 @@ $ curl localhost:8080/recognize -F 'image=@./cat.jpg'
   ]
 }
 ```
+
+## Reference
+
+Credit goes to [Build an Image Recognition API with Go and TensorFlow](https://outcrawl.com/image-recognition-api-go-tensorflow/).
